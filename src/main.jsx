@@ -120,8 +120,8 @@ function PolicyPage({ type }) {
             <p><b>Last updated: 10 November 2026</b></p>
             <h2>1. Who is responsible for personal information?</h2>
             <p>The website operator is responsible for deciding how personal information is handled. The operator’s legal name, address and privacy contact have not yet been provided and must be added before collecting applications. In South Africa, this policy is intended to support transparency under POPIA; other laws may also apply depending on where you live and how the service operates.</p>
-            <h2>2. What happens when you use this preview?</h2>
-            <p>Live application collection remains disabled until the operator configures and verifies the secure intake service, private file storage, access controls and deletion schedule. While disabled, information you type is held only in the open page; selected ID and CV files are not transmitted or stored. Do not enter real personal information or select real ID or CV files unless the site clearly states that secure collection is active.</p>
+            <h2>2. Application intake status</h2>
+            <p>Application collection is currently disabled until the operator configures and verifies the secure intake service, private file storage, access controls and deletion schedule. Do not send personal information or documents unless the site clearly states that secure collection is active.</p>
             <p>When hosted, the hosting provider may process technical connection information in service or security logs. The site requests typefaces from Google Fonts. If application intake is enabled, Supabase will process application data and store documents in a private bucket in the project’s West EU (Ireland, eu-west-1) region, and Cloudflare Turnstile will process anti-abuse verification data. The operator must publish the actual providers, privacy contact and applicable transfer safeguards before collection begins.</p>
             <h2>3. Information planned for a live application</h2>
             <p>If enabled, the application service collects your name, email address, country of residence, phone and WhatsApp numbers, an identity document (national ID, driver’s licence or passport) solely to verify age, age confirmation, an optional CV file, and required acknowledgements. An identity document contains sensitive personal information; a CV may include employment history, education and contact details. Applicant records and uploaded documents are scheduled for automatic deletion 90 days after submission. Collection must remain disabled until the operator verifies necessity and lawful basis, provides clear notice, and tests secure upload, restricted access, region and deletion settings.</p>
@@ -150,7 +150,9 @@ function App() {
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   const collectionEnabled = import.meta.env.VITE_APPLICATIONS_ENABLED === 'true'
     && Boolean(supabaseUrl && supabaseAnonKey && turnstileSiteKey);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const turnstileTestMode = import.meta.env.VITE_TURNSTILE_TEST_MODE === 'true'
+  && Boolean(turnstileSiteKey);
+    const [menuOpen, setMenuOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState('');
@@ -169,7 +171,7 @@ function App() {
   const callingCode = selectedCountry ? `+${selectedCountry.countryCallingCode}` : '';
 
   useEffect(() => {
-    if (!collectionEnabled || submitted) return undefined;
+  if ((!collectionEnabled && !turnstileTestMode) || submitted) return undefined;
 
     let active = true;
     const renderWidget = () => {
@@ -294,7 +296,7 @@ function App() {
     }
     setSubmissionError('');
     if (!collectionEnabled) {
-      setSubmitted(true);
+      setSubmissionError('Applications are temporarily unavailable. Please check back soon.');
       return;
     }
     if (!turnstileToken) {
@@ -403,7 +405,7 @@ function App() {
         <div className="container register-grid">
           <div className="register-copy"><div className="eyebrow">YOUR FIRST STEP</div><h2>Let’s start with<br/><em>your application.</em></h2></div>
           <div className="form-card">
-            {submitted ? <div className="success-state"><span className="success-icon"><CheckCircle2 size={34}/></span><h3>{collectionEnabled ? 'Expression of interest received' : 'Preview complete'}</h3><p>{collectionEnabled ? 'Your expression of interest has been submitted securely. This is not an official job application or a guarantee of work.' : 'This is a website preview, so your information and files have not been sent or stored.'}</p><button className="btn btn-outline" onClick={() => { setSubmitted(false); setTurnstileToken(''); if (turnstileWidgetId.current !== null && window.turnstile) window.turnstile.reset(turnstileWidgetId.current); }}>Back to form</button></div> : <>
+            {!collectionEnabled && !turnstileTestMode ? <div className="success-state" role="status">!<h3>Applications temporarily unavailable</h3><p>We’re preparing our secure application service. Please check back soon.</p></div> : submitted ? <div className="success-state"><span className="success-icon"><CheckCircle2 size={34}/></span><h3>Expression of interest received</h3><p>Your expression of interest has been submitted securely. This is not an official job application or a guarantee of work.</p><button className="btn btn-outline" onClick={() => { setSubmitted(false); setTurnstileToken(''); if (turnstileWidgetId.current !== null && window.turnstile) window.turnstile.reset(turnstileWidgetId.current); }}>Back to form</button></div> : <>
               <div className="form-title"><div><h3>Application details</h3><p>Fields marked with * are required.</p></div><span className="form-badge">CANDIDATE FORM</span></div>
               <form onSubmit={handleSubmit}>
                 <label>Full name *<input name="fullName" value={form.fullName} onChange={update} placeholder="Your full name" autoComplete="name" required/></label>
@@ -415,21 +417,30 @@ function App() {
                 <div className="cv-upload-field">
                   <label htmlFor="id-upload">Upload your ID *</label>
                   <input id="id-upload" name="idFile" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={handleIdChange} required/>
-                  <p className="cv-upload-help">National ID, driver’s licence or passport. PDF, JPG or PNG, up to 5 MB. This preview does not upload or save your file.</p>
+                  <p className="cv-upload-help">National ID, driver’s licence or passport. PDF, JPG or PNG, up to 5 MB.</p>
                   {idFileName && <p className="cv-file-name">Selected: {idFileName}</p>}
                   {idError && <p className="cv-upload-error" role="alert">{idError}</p>}
                 </div>
                 <div className="cv-upload-field">
                   <label htmlFor="cv-upload">Upload your CV</label>
                   <input id="cv-upload" name="cvFile" type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleCvChange}/>
-                  <p className="cv-upload-help">PDF or Word document, up to 5 MB. This preview does not upload or save your file.</p>
+                  <p className="cv-upload-help">PDF or Word document, up to 5 MB.</p>
                   {cvFileName && <p className="cv-file-name">Selected: {cvFileName}</p>}
                   {cvError && <p className="cv-upload-error" role="alert">{cvError}</p>}
                 </div>
                 <div className="consents"><label className="checkbox-label"><input type="checkbox" name="adult" checked={form.adult} onChange={update} required/><span>I understand this opportunity involves adult-oriented chat services and confirm that I am 18 or older. *</span></label><label className="checkbox-label"><input type="checkbox" name="consent" checked={form.consent} onChange={update} required/><span>I agree that OpenChats may contact me about this expression of interest. I have read the <a href="/?policy=privacy" target="_blank" rel="noreferrer">Privacy Policy</a>. *</span></label></div>
-                {collectionEnabled && <div className="turnstile-field"><div ref={turnstileContainer}/>{turnstileError && <p className="cv-upload-error" role="alert">{turnstileError}</p>}</div>}
+                {(collectionEnabled || turnstileTestMode) && (
+  <div className="turnstile-field">
+    <div ref={turnstileContainer}/>
+    {turnstileError && (
+      <p className="cv-upload-error" role="alert">
+        {turnstileError}
+      </p>
+    )}
+  </div>
+)}
                 {submissionError && <p className="submission-error" role="alert">{submissionError}</p>}
-                <button className="btn btn-primary submit-btn" type="submit" disabled={isSubmitting || (collectionEnabled && !turnstileToken)}>{isSubmitting ? 'Submitting securely…' : collectionEnabled ? 'Submit application' : 'Submit application (preview)'} <ArrowRight size={17}/></button>
+                <button className="btn btn-primary submit-btn" type="submit" disabled={isSubmitting || !turnstileToken}>{isSubmitting ? 'Submitting securely…' : 'Submit application'} <ArrowRight size={17}/></button>
                 <p className="form-footnote">Upload only your own ID document for age verification. Do not provide banking details, passwords, health information or unrelated sensitive information.</p>
               </form>
             </>}
