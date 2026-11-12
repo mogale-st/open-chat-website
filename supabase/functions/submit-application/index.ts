@@ -41,7 +41,13 @@ function getConfig() {
     || allowedOrigins.length === 0
   ) return null;
 
-  return { supabaseUrl, serviceRoleKey, turnstileSecret, retentionDays, allowedOrigins };
+  return {
+    supabaseUrl,
+    serviceRoleKey,
+    turnstileSecret,
+    retentionDays,
+    allowedOrigins
+  };
 }
 
 function jsonResponse(body: unknown, status: number, origin: string) {
@@ -142,6 +148,7 @@ Deno.serve(async request => {
 
   if (
     !fullName
+    || !/^[A-Z][a-z]+(?: [A-Z][a-z]+)*$/.test(fullName)
     || !/^[A-Z]{2}$/.test(countryCode)
     || !/^\+[1-9][0-9]{0,2}$/.test(phoneCountryCallingCode)
     || getEmailError(email)
