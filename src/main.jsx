@@ -150,9 +150,10 @@ function App() {
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   const collectionEnabled = import.meta.env.VITE_APPLICATIONS_ENABLED === 'true'
     && Boolean(supabaseUrl && supabaseAnonKey && turnstileSiteKey);
+
   const turnstileTestMode = import.meta.env.VITE_TURNSTILE_TEST_MODE === 'true'
-  && Boolean(turnstileSiteKey);
-    const [menuOpen, setMenuOpen] = useState(false);
+    && Boolean(turnstileSiteKey);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState('');
@@ -405,7 +406,7 @@ function App() {
         <div className="container register-grid">
           <div className="register-copy"><div className="eyebrow">YOUR FIRST STEP</div><h2>Let’s start with<br/><em>your application.</em></h2></div>
           <div className="form-card">
-            {!collectionEnabled && !turnstileTestMode ? <div className="success-state" role="status">!<h3>Applications temporarily unavailable</h3><p>We’re preparing our secure application service. Please check back soon.</p></div> : submitted ? <div className="success-state"><span className="success-icon"><CheckCircle2 size={34}/></span><h3>Expression of interest received</h3><p>Your expression of interest has been submitted securely. This is not an official job application or a guarantee of work.</p><button className="btn btn-outline" onClick={() => { setSubmitted(false); setTurnstileToken(''); if (turnstileWidgetId.current !== null && window.turnstile) window.turnstile.reset(turnstileWidgetId.current); }}>Back to form</button></div> : <>
+            {! collectionEnabled && !turnstileTestMode ? <div className="success-state" role="status"><h3>Applications temporarily unavailable</h3><p>We’re preparing our secure application service. Please check back soon.</p></div> : submitted ? <div className="success-state"><span className="success-icon"><CheckCircle2 size={34}/></span><h3>Expression of interest received</h3><p>Your expression of interest has been submitted securely. This is not an official job application or a guarantee of work.</p><button className="btn btn-outline" onClick={() => { setSubmitted(false); setTurnstileToken(''); if (turnstileWidgetId.current !== null && window.turnstile) window.turnstile.reset(turnstileWidgetId.current); }}>Back to form</button></div> : <>
               <div className="form-title"><div><h3>Application details</h3><p>Fields marked with * are required.</p></div><span className="form-badge">CANDIDATE FORM</span></div>
               <form onSubmit={handleSubmit}>
                 <label>Full name *<input name="fullName" value={form.fullName} onChange={update} placeholder="Your full name" autoComplete="name" required/></label>
