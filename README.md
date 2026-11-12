@@ -10,51 +10,34 @@ A candidate website for OpenChats, built with React and Vite.
 
 ## Supabase application intake
 
-The form stays in preview mode unless `VITE_APPLICATIONS_ENABLED=true` and all public website settings are configured. Live submissions use a Supabase Edge Function; ID and CV documents are uploaded by the function to a private Storage bucket. The browser never receives the Supabase service-role key.
+Application collection is disabled. The deployment checklist below is for future planning only; do not run its commands, apply migrations, deploy either Edge Function, configure a retention schedule, or enable submissions as part of this review.
 
-Before enabling live intake:
+### Future deployment checklist — deferred, not for execution
 
-1. Complete and review the privacy notice and terms. Confirm the legal operator, contact details, lawful basis, Supabase data region, international transfers, and the necessity of collecting ID documents.
-2. The confirmed target is the Supabase West EU (Ireland, `eu-west-1`) region with a 90-day retention period for application records and documents. Verify the project’s actual region and that it meets your legal requirements before proceeding. Configure and test daily cleanup before enabling submissions.
-3. Install and authenticate the Supabase CLI using the [official instructions](https://supabase.com/docs/guides/local-development/cli/getting-started). Create a Cloudflare Turnstile site key and secret, restricted to the application domains.
-4. Apply the migration and deploy the functions:
-   ```sh
-   npx supabase login
-   npx supabase link --project-ref YOUR_PROJECT_REF
-   npx supabase db push
-   npx supabase functions deploy submit-application
-   npx supabase functions deploy cleanup-expired-applications
-   ```
-5. In Supabase Dashboard → **Edge Functions → Secrets**, set `APPLICATIONS_ENABLED=false`, `OPERATOR_DETAILS_CONFIRMED=false`, `LEGAL_REVIEW_CONFIRMED=false`, `DATA_REGION_CONFIRMED=false`, `RETENTION_CLEANUP_CONFIGURED=false`, `ID_RETENTION_DAYS=90`, `TURNSTILE_SECRET_KEY`, `CRON_SECRET` (a long random value), and `ALLOWED_ORIGINS` (comma-separated exact origins, with no trailing slash). Make sure the functions can access the project’s `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Never put a service-role key in the website or a `VITE_` variable.
-6. Configure Supabase Cron (with `pg_cron`, `pg_net`, and Vault) to call `cleanup-expired-applications` daily. In the SQL editor, enable the extensions and save the function URL and `Bearer <CRON_SECRET>` in Vault:
-   ```sql
-   create extension if not exists pg_cron with schema extensions;
-   create extension if not exists pg_net with schema extensions;
-   select vault.create_secret(
-     'https://YOUR_PROJECT_REF.supabase.co/functions/v1/cleanup-expired-applications',
-     'application_cleanup_url'
-   );
-   select vault.create_secret('Bearer REPLACE_WITH_CRON_SECRET', 'application_cleanup_authorization');
-   select cron.schedule(
-     'delete-expired-applications',
-     '15 2 * * *',
-     $$
-       select net.http_post(
-         url := (select decrypted_secret from vault.decrypted_secrets where name = 'application_cleanup_url'),
-         headers := jsonb_build_object(
-           'Authorization', (select decrypted_secret from vault.decrypted_secrets where name = 'application_cleanup_authorization'),
-           'Content-Type', 'application/json'
-         ),
-         body := '{}'::jsonb
-       );
-     $$
-   );
-   ```
-   Verify deletion of expired test submissions before setting `RETENTION_CLEANUP_CONFIGURED=true`.
-7. Copy `.env.example` to `.env.local` and replace the placeholders with the project URL, public publishable/anon key, and Turnstile site key. Keep `VITE_APPLICATIONS_ENABLED=false`. Find the project URL and public key under Supabase Dashboard → **Project Settings → API**. The publishable/anon key is public; database and Storage security depend on the migration’s RLS and private-bucket rules.
-8. After verifying the live privacy notices, region, cleanup schedule, and test submission/deletion path, set the server-side `APPLICATIONS_ENABLED`, `OPERATOR_DETAILS_CONFIRMED`, `LEGAL_REVIEW_CONFIRMED`, `DATA_REGION_CONFIRMED`, and `RETENTION_CLEANUP_CONFIGURED` secrets to `true`. Then set `VITE_APPLICATIONS_ENABLED=true`, rebuild, and deploy the website.
+Before any future deployment, separately review and approve the privacy notice, terms, legal operator and contact details, lawful basis, data region, international transfers, and need to collect identity documents. The cleanup function, retention period, and scheduled cleanup are deferred for a separate review; do not configure `ID_RETENTION_DAYS`, `CRON_SECRET`, `RETENTION_CLEANUP_CONFIGURED`, or Supabase Cron now.
 
-Do not enable collection until the actual data region is confirmed, the 90-day retention schedule is tested, and the secure configuration is reviewed. Applicant records and documents are accessible only to privileged Supabase project operators; protect those accounts with MFA and least-privilege access. The email check catches malformed addresses and a small set of disposable domains; it does not verify mailbox ownership.
+After that review and explicit deployment approval, the Supabase CLI setup, reviewed database migrations, and `submit-application` function deployment can be planned. The cleanup function must remain separate until its behavior and retention policy are approved. The current Edge Function has server-side readiness gates; keep application intake disabled unless every required safeguard and legal prerequisite has been verified.
+
+Before enabling intake, use synthetic test data for a controlled end-to-end submission. Verify the resulting database status is `submitted`, confirm each expected object can be retrieved through authorised access to the private bucket, and confirm the bucket does not allow public access. Remove the test row and documents afterward and verify their removal. A successful database update alone does not prove that every document is retrievable.
+
+Each row starts as `pending` and only becomes `submitted` after document uploads complete. On upload or status-update failure, the function attempts rollback and may mark a retained row `upload_failed`; a network failure can leave a row `pending`. After the reviewed schema is applied, an authorised operator can identify these records with this read-only query:
+
+```sql
+select id, created_at, status, id_document_path, cv_document_path
+from public.applications
+where status in ('pending', 'upload_failed')
+order by created_at asc;
+```
+
+Review these rows and their private Storage objects through authorised operator access before enabling intake. This query does not check whether documents for rows marked `submitted` remain retrievable; the controlled integration test above is required separately.
+
+For future local testing, copy `.env.example` to `.env.local` and use the Supabase project URL, public publishable/anon key, and Turnstile site key. Keep `VITE_APPLICATIONS_ENABLED=false`. Find the project URL and public key under Supabase Dashboard → **Project Settings → API**. The publishable/anon key is public; never put a service-role key or other secret in the website or a `VITE_` variable.
+
+The submission endpoint enforces a limit of five requests per normalized email address per hour using an HMAC-SHA256 digest. The raw email address is not written to the rate-limit table; the application record still stores the applicant's email for the stated application purpose. This email-based limit is not a complete replacement for IP-based protection because a person can submit using multiple email addresses. Turnstile helps reduce automated abuse but does not eliminate that possibility.
+
+File extension, declared MIME type, and signature checks are only a first format-validation layer; they do not prove that a file is valid or safe, and no malware scanning is configured. PDF checks only inspect the header; JPG/PNG checks do not decode the image; legacy DOC checks only inspect the OLE signature and `WordDocument` marker. DOCX checks ZIP directory entries without decompressing or validating the document contents, and ZIP64 is unsupported. These checks can accept malformed or malicious files. More complete PDF/image/document parsing and malware scanning should be evaluated before documents are made available to authorised staff.
+
+Phone validation checks allowed characters and overall digit length, but does not verify a number against the selected country's numbering plan. Email validation checks syntax and a small local list of disposable domains; that list cannot identify every temporary email provider, and the address is not verified as belonging to the applicant. Name validation accepts international letters, diacritics, spaces, apostrophes, and hyphens.
 
 ## Run locally
 1. Install Node.js LTS from https://nodejs.org/.
