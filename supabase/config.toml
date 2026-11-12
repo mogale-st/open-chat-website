@@ -1,0 +1,5 @@
+[functions.submit-application]
+verify_jwt = false
+
+[functions.cleanup-expired-applications]
+verify_jwt = false
