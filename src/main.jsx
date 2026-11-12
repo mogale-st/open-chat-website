@@ -12,9 +12,9 @@ const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior:
 const countries = [...countryCodes.all()].sort((a, b) => a.countryNameEn.localeCompare(b.countryNameEn));
 
 function Brand() {
-  return <a className="brand" href="#home" aria-label="OpenChats home">
+  return <a className="brand" href="#home" aria-label="OPENCHAT home">
     <span className="brand-mark"><MessageCircle size={22}/><span/></span>
-    <span className="brand-name"><b>OPENCHATS</b></span>
+    <span className="brand-name"><b>OPENCHAT</b></span>
   </a>;
 }
 
@@ -79,17 +79,17 @@ function TrustedByCarousel() {
 function PolicyPage({ type }) {
   const isTerms = type === 'terms';
   useEffect(() => {
-    document.title = `${isTerms ? 'Terms of Use' : 'Privacy Policy'} | OpenChats`;
+    document.title = `${isTerms ? 'Terms of Use' : 'Privacy Policy'} | OPENCHAT`;
   }, [isTerms]);
 
   return <div className="policy-page">
     <header className="header">
       <div className="nav container">
-        <a className="brand" href="/" aria-label="OpenChats home">
+        <a className="brand" href="/" aria-label="OPENCHAT home">
           <span className="brand-mark"><MessageCircle size={22}/></span>
-          <span className="brand-name"><b>OPENCHATS</b></span>
+          <span className="brand-name"><b>OPENCHAT</b></span>
         </a>
-        <a className="btn btn-primary" href="/">Back to OpenChats</a>
+        <a className="btn btn-primary" href="/">Back to OPENCHAT</a>
       </div>
     </header>
     <main>
@@ -460,7 +460,7 @@ function App() {
 
     </main>
 
-    <footer className="footer"><div className="container"><div className="footer-main"><div><Brand/><p>Connecting Talent. Creating Opportunities.</p></div><div className="footer-links"><a href="#opportunity">Opportunity</a><a href="#requirements">Requirements</a><a href="/?policy=terms" target="_blank" rel="noreferrer">Terms of Use</a><a href="/?policy=privacy" target="_blank" rel="noreferrer">Privacy Policy</a></div><button className="footer-top" onClick={() => scrollTo('home')}>Back to top ↑</button></div><div className="footer-bottom"><span>© {new Date().getFullYear()} OpenChats. All rights reserved.</span><span>Independent candidate-sourcing service · Not an official Texting Factory representative.</span></div></div></footer>
+    <footer className="footer"><div className="container"><div className="footer-main"><div><Brand/><p>Connecting Talent. Creating Opportunities.</p></div><div className="footer-links"><a href="#opportunity">Opportunity</a><a href="#requirements">Requirements</a><a href="/?policy=terms" target="_blank" rel="noreferrer">Terms of Use</a><a href="/?policy=privacy" target="_blank" rel="noreferrer">Privacy Policy</a></div><button className="footer-top" onClick={() => scrollTo('home')}>Back to top ↑</button></div>    <div className="footer-bottom"><span>© {new Date().getFullYear()} OPENCHAT. All rights reserved.</span><span>Independent candidate-sourcing service · Not an official Texting Factory representative.</span></div></div></footer>
   </>;
 }
 
