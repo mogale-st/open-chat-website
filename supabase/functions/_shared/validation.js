@@ -1,4 +1,4 @@
-const dideno test supabase/functions/_shared/validation.test.jsdeno test supabase/functions/_shared/validation.test.jsposableEmailDomains = new Set([
+const disposableEmailDomains = new Set([
   '10minutemail.com', 'dispostable.com', 'emailondeck.com', 'example.com',
   'example.net', 'example.org', 'fakeinbox.com', 'getnada.com',
   'guerrillamail.com', 'maildrop.cc', 'mailinator.com', 'invalid', 'localhost',
